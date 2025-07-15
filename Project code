@@ -1,0 +1,175 @@
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <ArduinoJson.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include <DHT.h>
+
+#define DHTPIN 4
+#define DHTTYPE DHT11
+#define TRIG 14
+#define ECHO 27
+#define RAIN_SENSOR 32
+#define MQ2_SENSOR 33
+#define LDR_SENSOR 34
+
+#define RED_LED 16
+#define YELLOW_LED 17
+#define GREEN_LED 5
+#define STREET_LIGHT 18
+
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+#define OLED_RESET -1
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+DHT dht(DHTPIN, DHTTYPE);
+
+// WiFi Credentials
+const char* ssid = "YOUR_WIFI_SSID";
+const char* password = "YOUR_WIFI_PASSWORD";
+
+// Weather API
+String weatherApi = "http://api.weatherapi.com/v1/current.json?key=YOUR_API_KEY&q=Pune&aqi=no";
+unsigned long lastWeatherUpdate = 0;
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(TRIG, OUTPUT);
+  pinMode(ECHO, INPUT);
+  pinMode(RAIN_SENSOR, INPUT);
+  pinMode(MQ2_SENSOR, INPUT);
+  pinMode(LDR_SENSOR, INPUT);
+
+  pinMode(RED_LED, OUTPUT);
+  pinMode(YELLOW_LED, OUTPUT);
+  pinMode(GREEN_LED, OUTPUT);
+  pinMode(STREET_LIGHT, OUTPUT);
+
+  dht.begin();
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+  display.clearDisplay();
+
+  connectWiFi();
+}
+
+void loop() {
+  float humidity = dht.readHumidity();
+  float temperature = dht.readTemperature();
+  int rain = digitalRead(RAIN_SENSOR);
+  int gas = analogRead(MQ2_SENSOR);
+  int ldr = analogRead(LDR_SENSOR);
+
+  long duration, distance;
+  digitalWrite(TRIG, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG, LOW);
+  duration = pulseIn(ECHO, HIGH);
+  distance = duration * 0.034 / 2;
+
+  // OLED Display
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  display.setCursor(0, 0);
+  display.print("Temp: ");
+  display.print(temperature);
+  display.println(" C");
+  display.print("Humidity: ");
+  display.print(humidity);
+  display.println(" %");
+
+  if (rain == 0 || humidity > 70) {
+    display.setTextSize(1);
+    display.setCursor(0, 40);
+    display.println("SLOW DOWN (Wet)");
+  } else if (distance < 20) {
+    display.setTextSize(2);
+    display.setCursor(0, 40);
+    display.println("GO NOW");
+  } else {
+    display.setTextSize(2);
+    display.setCursor(0, 40);
+    display.println("STOP NOW");
+  }
+  display.display();
+
+  // LED Logic
+  if (distance < 20) {
+    digitalWrite(GREEN_LED, HIGH);
+    digitalWrite(RED_LED, LOW);
+    digitalWrite(YELLOW_LED, LOW);
+  } else {
+    digitalWrite(RED_LED, HIGH);
+    digitalWrite(GREEN_LED, LOW);
+    digitalWrite(YELLOW_LED, LOW);
+  }
+
+  // LDR Controlled Street Light
+  if (ldr < 1000) {
+    digitalWrite(STREET_LIGHT, HIGH); // Night
+  } else {
+    digitalWrite(STREET_LIGHT, LOW);  // Day
+  }
+
+  // Fetch weather every 10 sec
+  if (millis() - lastWeatherUpdate > 10000) {
+    fetchWeather();
+    lastWeatherUpdate = millis();
+  }
+
+  delay(1000);
+}
+
+void connectWiFi() {
+  WiFi.begin(ssid, password);
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.setTextSize(1);
+  display.println("Connecting to WiFi...");
+  display.display();
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.println("WiFi Connected!");
+  display.display();
+}
+
+void fetchWeather() {
+  if (WiFi.status() == WL_CONNECTED) {
+    HTTPClient http;
+    http.begin(weatherApi);
+    int httpResponseCode = http.GET();
+
+    if (httpResponseCode == 200) {
+      String payload = http.getString();
+      StaticJsonDocument<1024> doc;
+      deserializeJson(doc, payload);
+      String condition = doc["current"]["condition"]["text"];
+      float temp = doc["current"]["temp_c"];
+      float hum = doc["current"]["humidity"];
+
+      Serial.println("Weather: " + condition);
+
+      display.clearDisplay();
+      display.setCursor(0, 0);
+      display.setTextSize(1);
+      display.println("Live Weather:");
+      display.print("Temp: ");
+      display.print(temp);
+      display.println(" C");
+      display.print("Cond: ");
+      display.println(condition);
+      display.display();
+      delay(5000); // Show for 5 seconds
+    }
+    http.end();
+  }
+}
