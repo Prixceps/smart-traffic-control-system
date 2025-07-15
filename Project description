@@ -1,0 +1,74 @@
+# 🚦 Smart Traffic Control System using ESP32
+
+An intelligent traffic control system built using ESP32, sensors, and actuators to automate signal behavior based on real-time traffic, weather, and environmental conditions.
+
+## 📌 Overview
+
+This project aims to optimize traffic flow and enhance road safety using a smart traffic system. It detects real-time traffic density, weather conditions, and ambient light levels to dynamically control traffic lights and alert systems. The system also displays messages to commuters and fetches live weather updates from the internet.
+
+## 🧠 Features
+
+- 🚘 **Traffic Density Monitoring**: Uses ultrasonic sensors to detect the number of vehicles at an intersection.
+- 🌧️ **Weather-Aware Signaling**: Detects high humidity or rain and displays a **"SLOW DOWN"** warning.
+- ☀️ **Automatic Street Light Control**: Turns street lights ON/OFF using a light sensor or live weather data.
+- 📡 **Live Weather Updates**: Fetches temperature and weather information from the internet every 10 seconds.
+- 🖥️ **OLED Display**:
+  - Shows real-time humidity and temperature.
+  - Displays contextual messages like "GO NOW", "STOP NOW", or weather conditions.
+- 🔴🟡🟢 **LED Traffic Lights**: Simulates traditional traffic lights using color LEDs, adapting signal duration based on traffic.
+- 🚨 **Gas Detection (MQ-2)**: Detects presence of smoke or flammable gases for safety monitoring.
+
+## 🧰 Components Used
+
+| Component           | Description                          |
+|--------------------|--------------------------------------|
+| ESP32              | Microcontroller                      |
+| Ultrasonic Sensors | For traffic density sensing          |
+| DHT11              | Temperature & humidity sensor        |
+| FC-37              | Rain detection module                |
+| LDR                | Light detection for auto lighting    |
+| MQ-2               | Gas/smoke detection                  |
+| OLED Display       | Display system messages and weather  |
+| LED Bulbs          | Simulate red/yellow/green signals    |
+| Internet / WiFi    | Fetch live weather using API         |
+
+## 🔌 Circuit Connections
+
+Basic wiring:
+- Ultrasonic sensors connected to GPIOs for real-time distance readings.
+- DHT11, MQ-2, FC-37, and LDR connected to analog/digital pins.
+- OLED display via I2C (SCL/SDA).
+- LEDs connected through resistors to control traffic lights.
+- ESP32 connected to Wi-Fi for fetching weather via HTTP GET request.
+
+## 🌐 Weather API Integration
+
+- The ESP32 fetches weather data every 10 seconds using an open weather API.
+- Parses JSON data to display:
+  - **Temperature**
+  - **Humidity**
+  - **Condition (Rainy, Sunny, etc.)**
+
+## 📊 Output Logic
+
+- If **high traffic** → extend green light duration and display **"GO NOW"**.
+- If **low traffic** → reduce green duration and display **"STOP NOW"**.
+- If **humidity > threshold** or **rain detected** → show **"SLOW DOWN"** warning.
+- **Gas detected** → trigger visual alert on OLED or activate buzzer (optional).
+- At **night (low light)** → street light turns ON.
+- Live weather displays every 10 seconds for 5 seconds.
+
+## 📷 Demo
+
+> *(Add images/videos of your circuit, OLED screen in action, and live results here)*  
+You can include `.gif`, `.mp4`, or YouTube demo links to showcase functionality.
+
+## 📦 Future Improvements
+
+- Emergency vehicle detection using IR or sound pattern recognition.
+- Real-time data logging to Firebase or Google Sheets.
+- Priority system for ambulances/fire trucks.
+- Centralized dashboard to monitor multiple intersections.
+
+## 📁 Folder Structure
+
